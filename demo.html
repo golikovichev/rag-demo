@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grounded document assistant — live demo</title>
+<style>
+  :root { --ink:#141414; --muted:#666; --line:#ddd; --bg:#fafafa; --ok:#0f7b3f; --warn:#a8400f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color:var(--ink); background:#fff; line-height:1.5; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 24px; margin: 0 0 6px; letter-spacing:-.3px; }
+  .lead { color: var(--muted); margin: 0 0 22px; font-size: 15px; }
+  .panel { border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--bg); }
+  input[type=text] { width:100%; padding:11px 12px; font-size:15px; border:1px solid #c9c9c9; border-radius:8px; background:#fff; }
+  input[type=text]:focus { outline:2px solid #141414; outline-offset:1px; }
+  .row { display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  button { font: inherit; padding:10px 16px; border-radius:8px; border:1px solid #141414; background:#141414; color:#fff; cursor:pointer; }
+  button.ghost { background:#fff; color:#141414; }
+  button:hover { opacity:.88; }
+  .examples { margin-top:16px; font-size:13.5px; color:var(--muted); }
+  .examples button { margin:4px 6px 0 0; padding:6px 10px; font-size:13px; background:#fff; color:#141414; border-color:#cfcfcf; }
+  .answer { margin-top:20px; border:1px solid var(--line); border-radius:10px; padding:16px; display:none; }
+  .answer.show { display:block; }
+  .answer .label { font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--muted); }
+  .answer .text { font-size:16px; margin:6px 0 12px; }
+  .answer.refused { border-color:#e7c9b8; background:#fdf6f1; }
+  .answer.refused .label { color:var(--warn); }
+  .meta { font-size:13px; color:var(--muted); border-top:1px dashed var(--line); padding-top:10px; }
+  .meta code { background:#eee; padding:1px 5px; border-radius:4px; font-size:12.5px; }
+  .badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#e8f5ec; color:var(--ok); margin-left:8px; vertical-align:2px; }
+  .badge.no { background:#fbe9e0; color:var(--warn); }
+  footer { margin-top:34px; font-size:13px; color:var(--muted); border-top:1px solid var(--line); padding-top:12px; }
+  summary { cursor:pointer; font-size:13.5px; color:var(--muted); margin-top:14px; }
+  .docs { font-size:13px; color:var(--muted); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Grounded document assistant</h1>
+  <p class="lead">Answers only from the documents below, cites the paragraph it used, and refuses when the answer is not there. No API key, no server: retrieval runs in this page.</p>
+
+  <div class="panel">
+    <input id="q" type="text" placeholder="Ask about prices, areas, certificates, deposits…" autocomplete="off">
+    <div class="row">
+      <button id="go">Ask</button>
+      <button id="clear" class="ghost">Clear</button>
+    </div>
+    <div class="examples" id="examples"></div>
+  </div>
+
+  <div class="answer" id="answer">
+    <div class="label" id="label"></div>
+    <div class="text" id="text"></div>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <details>
+    <summary>What the assistant can see (2 documents, demo data about a fictional heating company)</summary>
+    <div class="docs" id="docs"></div>
+  </details>
+
+  <footer>
+    Proof of concept: TF-IDF retrieval with a score threshold, extractive answer, source shown for every reply.
+    The refusal is the feature: a chatbot that always answers invents prices. Production build adds embeddings, reranking, logging and a channel (Telegram, website widget, CRM).
+  </footer>
+</div>
+
+<script>
+// ── Corpus: the same two files as docs_en/ in the repository ─────────────────
+const DOCUMENTS = {
+  "price-list.md": `# Price list — Harwood Heating (demo data)
+
+All prices include VAT. Prices are for Manchester and within 25 miles.
+
+## Boiler service
+
+Annual boiler service — £85. Includes flue check, combustion reading, and a written
+service record. Takes about 45 minutes.
+
+## Boiler repair
+
+Boiler repair starts at £120 for the first hour, then £45 for every additional half hour.
+Parts are charged at cost plus 15%.
+
+## Radiators
+
+New radiator supplied and fitted — £220 per radiator, standard size. Moving an existing
+radiator to another wall — £160.
+
+## Emergency callout
+
+Emergency callout — £150, which covers the first hour and travel. Out of hours,
+between 18:00 and 08:00, the callout is £210.
+
+## Boiler replacement
+
+Combi boiler replacement, supply and fit — from £2,400. Includes flushing the system,
+a magnetic filter, and commissioning. Two working days on site.
+
+## Gas Safety certificate
+
+Landlord Gas Safety Record (CP12) — £75 for one appliance, £25 for each additional
+appliance at the same address.
+
+## Payment
+
+No deposit is required for any job. Payment is due after the work is finished and
+checked by the customer. We accept card, bank transfer, and cash. For companies we
+issue an invoice with 14-day payment terms.
+
+## Warranty
+
+Twelve months on labour. Parts carry the manufacturer's warranty, usually two years.
+The warranty does not cover damage caused by limescale or by a third party working on
+the boiler afterwards.`,
+
+  "faq.md": `# Frequently asked questions — Harwood Heating (demo data)
+
+## What are your working hours?
+
+We work Monday to Saturday, 08:00 to 18:00. Emergency cover runs 24 hours a day,
+including Sundays and bank holidays.
+
+## How quickly can you come out?
+
+For a breakdown we aim to attend the same day if the call is before 16:00. If the call
+comes in later, we attend the next morning unless it is an emergency.
+
+## Do you work with landlords and letting agents?
+
+Yes. We issue the Landlord Gas Safety Record (CP12) and send the certificate to the
+landlord and the agent by email the same week. We keep a copy on file for two years.
+
+## Do you require a deposit?
+
+No. We never ask for a deposit. The customer pays after the work is done and checked.
+
+## Which areas do you cover?
+
+We cover Manchester and everything within 25 miles of the city centre: Salford, Sale,
+Altrincham, Stockport, Oldham, and Bolton. We do not travel further north than Bolton,
+so Leeds and Liverpool are outside our area.
+
+## Can you install a heat pump?
+
+No. We do not install heat pumps. We service and repair gas boilers only.
+
+## What happens if I need to cancel?
+
+Cancelling more than 24 hours before the appointment is free. Cancelling on the day, or
+not being at the address, is charged at £40 to cover the visit.`
+};
+
+// ── Retrieval: TF-IDF over section-level chunks ──────────────────────────────
+const STOPWORDS = new Set([
+  'a','an','am','and','any','are','as','at','be','been','being','by','can','could','did','do','does',
+  'for','from','get','had','has','have','he','her','here','him','how','i','if','in','is','it','its',
+  'just','me','might','much','must','my','no','not','of','on','only','or','our','she','should','so',
+  'some','such','than','that','the','their','them','then','there','these','they','this','those','to',
+  'us','was','we','were','what','when','where','which','who','why','will','with','would','yes','you','your',
+  'one','two','three','four','five','also','about','after','before','more','most','other','over','under'
+]);
+const THRESHOLD = 0.18;
+
+function tokens(text) {
+  return (text.toLowerCase().match(/[a-z0-9]{2,}/g) || [])
+    .filter(w => !STOPWORDS.has(w))
+    .map(stem);
+}
+
+// Лёгкий стеммер: «payment» и «pay» должны совпасть, иначе вопрос «Can I pay by
+// card?» не находит раздел Payment — обрезка до 6 букв давала «paymen» против «pay».
+function stem(word) {
+  // Порядок важен: сначала длинные суффиксы, «s» последним, иначе
+  // «appliances» превращалось в «applianc» и не совпадало с «appliance».
+  const суффиксы = ['ations', 'ation', 'ments', 'ment', 'ings', 'ing', 'ed', 'ers', 'er', 's'];
+  let w = word;
+  for (let проход = 0; проход < 2; проход++) {
+    let срезал = false;
+    for (const s of суффиксы) {
+      if (w.endsWith(s) && w.length - s.length >= 3) {
+        w = w.slice(0, -s.length);
+        срезал = true;
+        break;
+      }
+    }
+    if (!срезал) break;
+  }
+  return w;
+}
+
+function chunkDocuments(docs) {
+  const chunks = [];
+  for (const [file, raw] of Object.entries(docs)) {
+    const parts = raw.split(/\n\s*\n/);
+    let heading = null, buffer = [];
+    const flush = () => {
+      if (buffer.length) chunks.push({ file, heading, text: buffer.join(' ').replace(/\s+/g, ' ').trim() });
+      buffer = [];
+    };
+    for (const part of parts) {
+      const p = part.trim();
+      if (!p) continue;
+      if (p.startsWith('#')) {
+        flush();
+        heading = p.replace(/^#+\s*/, '');
+        continue;
+      }
+      buffer.push(p);
+    }
+    flush();
+  }
+  return chunks.filter(c => c.text.length > 20);
+}
+
+function buildIndex(docs) {
+  const chunks = chunkDocuments(docs);
+  const df = new Map();
+  const tfs = chunks.map(c => {
+    const tf = new Map();
+    for (const t of tokens(c.heading + ' ' + c.text)) tf.set(t, (tf.get(t) || 0) + 1);
+    for (const t of tf.keys()) df.set(t, (df.get(t) || 0) + 1);
+    return tf;
+  });
+  const N = chunks.length;
+  const vectors = tfs.map(tf => {
+    const v = new Map();
+    let norm = 0;
+    for (const [t, n] of tf) {
+      const idf = Math.log((N + 1) / ((df.get(t) || 0) + 1)) + 1;
+      const w = n * idf;
+      v.set(t, w);
+      norm += w * w;
+    }
+    norm = Math.sqrt(norm) || 1;
+    for (const [t, w] of v) v.set(t, w / norm);
+    return v;
+  });
+  return { chunks, vectors, df, N };
+}
+
+function score(index, question) {
+  const tf = new Map();
+  for (const t of tokens(question)) tf.set(t, (tf.get(t) || 0) + 1);
+  const v = new Map();
+  let norm = 0;
+  let всего = 0;
+  const максимальный = Math.log(index.N + 1) + 1;
+  for (const [t, n] of tf) {
+    const idf = Math.log((index.N + 1) / ((index.df.get(t) || 0) + 1)) + 1;
+    if (!index.df.has(t)) {
+      // Слова, которых нет в документах вовсе, тоже учитываем — иначе вопрос
+      // «Are you Gas Safe registered?» выглядел полностью покрытым («gas» и
+      // «safe» есть в прайсе), и ассистент отвечал ценой CP12.
+      всего += 0.5 * максимальный * n;
+      continue;
+    }
+    const w = n * idf;
+    v.set(t, w);
+    norm += w * w;
+    всего += w;
+  }
+  norm = Math.sqrt(norm) || 1;
+  const scored = index.vectors.map((vec, i) => {
+    let sum = 0;
+    let совпало = 0;
+    for (const [t, w] of v) {
+      if (vec.has(t)) {
+        sum += (w / norm) * vec.get(t);
+        совпало += w;
+      }
+    }
+    // Штраф за неполное покрытие вопроса: раньше на «Are you Gas Safe registered?»
+    // ассистент отвечал ценой CP12, потому что совпали только «gas» и «safe».
+    // Если в вопросе есть слово, которого нет во фрагменте, ответ считается слабее.
+    const покрытие = всего ? совпало / всего : 0;
+    return { score: sum * Math.pow(покрытие, 2), chunk: index.chunks[i] };
+  });
+  return scored.sort((a, b) => b.score - a.score);
+}
+
+const INDEX = buildIndex(DOCUMENTS);
+
+function answer(question) {
+  const ranked = score(INDEX, question);
+  const best = ranked[0];
+  if (!best || best.score < THRESHOLD) {
+    return { refused: true, text: "I couldn't find this in the documents. Passing it to a human.", score: best ? best.score : 0, source: null };
+  }
+  return { refused: false, text: best.chunk.text, score: best.score, source: best.chunk };
+}
+
+// ── UI ──────────────────────────────────────────────────────────────────────
+if (typeof document !== 'undefined') {
+  const q = document.getElementById('q');
+  const go = document.getElementById('go');
+  const clear = document.getElementById('clear');
+  const box = document.getElementById('answer');
+  const label = document.getElementById('label');
+  const text = document.getElementById('text');
+  const meta = document.getElementById('meta');
+  const examples = document.getElementById('examples');
+  const docs = document.getElementById('docs');
+
+  const SAMPLES = [
+    'How much is a boiler service?',
+    'Do you require a deposit?',
+    'Do you cover Leeds?',
+    'Can you install a heat pump?',
+    'Do you issue a Gas Safety certificate for landlords?',
+    'Do you do solar panels?'
+  ];
+
+  for (const s of SAMPLES) {
+    const b = document.createElement('button');
+    b.className = 'sample';
+    b.textContent = s;
+    b.addEventListener('click', () => { q.value = s; show(); });
+    examples.appendChild(b);
+  }
+
+  docs.textContent = Object.entries(DOCUMENTS)
+    .map(([f, raw]) => `${f}: ${(raw.match(/^## /gm) || []).length} sections`)
+    .join(' · ');
+
+  function show() {
+    const question = q.value.trim();
+    if (!question) return;
+    const r = answer(question);
+    box.className = 'answer show' + (r.refused ? ' refused' : '');
+    label.innerHTML = r.refused
+      ? 'No answer in the documents <span class="badge no">refused</span>'
+      : 'Answer from the documents <span class="badge">cited</span>';
+    text.textContent = r.text;
+    if (r.refused) {
+      meta.innerHTML = `Best match scored <code>${r.score.toFixed(3)}</code>, below the refusal threshold <code>${THRESHOLD}</code>. No source invented.`;
+    } else {
+      meta.innerHTML = `Source: <code>${r.source.file}</code> → “${r.source.heading}” · match <code>${r.score.toFixed(3)}</code>`;
+    }
+  }
+
+  go.addEventListener('click', show);
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') show(); });
+  clear.addEventListener('click', () => { q.value = ''; box.className = 'answer'; q.focus(); });
+
+  // Ссылку можно давать сразу с вопросом: demo.html?q=Do%20you%20require%20a%20deposit%3F
+  const изСсылки = new URLSearchParams(location.search).get('q');
+  if (изСсылки) { q.value = изСсылки; show(); } else { q.focus(); }
+}
+</script>
+</body>
+</html>
