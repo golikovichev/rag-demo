@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Associate profile — QA and automation verification, Mikhail Golikov</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm; }
+  :root { --ink:#141414; --muted:#5f5f5f; --line:#dcdcdc; --bg:#fafafa; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink); line-height:1.45; font-size:10.4pt; }
+  .kicker { font-size:8pt; letter-spacing:1.3px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  h1 { font-size:20pt; line-height:1.12; margin:5px 0 8px; letter-spacing:-.4px; }
+  .lead { font-size:10.6pt; color:#2b2b2b; margin:0 0 12px; }
+  .bar { display:flex; gap:18px; flex-wrap:wrap; border-top:2px solid var(--ink); border-bottom:1px solid var(--line); padding:7px 0; margin:0 0 12px; font-size:9.6pt; color:var(--muted); }
+  .bar b { color:var(--ink); }
+  h2 { font-size:10.6pt; margin:13px 0 6px; letter-spacing:.2px; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+  .card { border:1px solid var(--line); border-radius:7px; padding:7px 9px; background:var(--bg); }
+  .card h3 { margin:0 0 2px; font-size:9.8pt; }
+  .card p { margin:0; font-size:9.2pt; color:#3d3d3d; line-height:1.35; }
+  .steps { counter-reset:s; list-style:none; padding:0; margin:4px 0 0; display:grid; grid-template-columns:1fr 1fr; gap:4px 14px; }
+  .steps li { counter-increment:s; position:relative; padding-left:20px; font-size:9.4pt; color:#333; }
+  .steps li::before { content:counter(s); position:absolute; left:0; top:1px; width:14px; height:14px; border-radius:50%; background:var(--ink); color:#fff; font-size:7.4pt; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .proof { border-left:3px solid var(--ink); padding:2px 0 2px 9px; margin:6px 0 0; font-size:9.4pt; color:#2f2f2f; }
+  .two { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; }
+  ul.tight { margin:4px 0 0; padding-left:15px; font-size:9.4pt; }
+  ul.tight li { margin-bottom:2px; }
+  .foot { margin-top:11px; border-top:1px solid var(--line); padding-top:7px; display:flex; justify-content:space-between; gap:12px; font-size:9pt; color:var(--muted); }
+  .foot b { color:var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="kicker">Associate profile · QA and automation verification</div>
+<h1>Two days a week of hands, under your name</h1>
+<p class="lead">I test software, and I test the builds that testing usually misses: AI agents, document pipelines, n8n and Make workflows. I join consultancies as an associate, work under their brand, and hand back evidence a client can read — reproductions, severity, and what still breaks after the fix.</p>
+
+<div class="bar">
+  <span><b>Two days a week</b> · from December</span>
+  <span><b>White-label</b> under your brand</span>
+  <span><b>Report in 24 hours</b> after the pass</span>
+  <span><b>England</b> · remote</span>
+</div>
+
+<h2>What I take off your bench</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Automation that has to survive change</h3>
+    <p>Playwright and API-level suites written around the flows that cost money, not around coverage percentages. Tests that fail loudly when behaviour changes.</p>
+  </div>
+  <div class="card">
+    <h3>AI and agent verification</h3>
+    <p>Agents and RAG assistants tested against the questions real users ask: wrong answers, invented details, refusals that never happen. Includes a scored test set you can re-run.</p>
+  </div>
+  <div class="card">
+    <h3>Document and data pipelines</h3>
+    <p>Parsing, extraction and handover paths checked against messy real files: wrong totals, silent skips, fields that quietly become empty.</p>
+  </div>
+  <div class="card">
+    <h3>Defect reports that hold up</h3>
+    <p>Each defect with steps, expectation, actual result and severity — written so a delivery manager can forward it, not rewrite it.</p>
+  </div>
+</div>
+
+<h2>How an engagement runs</h2>
+<ol class="steps">
+  <li>You send the scope and the access.</li>
+  <li>I confirm what I can and cannot test within a day.</li>
+  <li>Two days of testing, questions in writing as they come up.</li>
+  <li>Report in 24 hours, then a walkthrough call if useful.</li>
+</ol>
+
+<div class="two">
+  <div>
+    <h2>Evidence you can check before committing</h2>
+    <p class="proof">I built a document assistant with retrieval over a real corpus, then tested it the way a client would. Six core checks and fourteen adversarial questions; the adversarial set found three failures on the first run — including a safety question answered with a price list. All fixed, and the test set is part of the deliverable.</p>
+    <ul class="tight">
+      <li>Two-page case: three defects found before the build reached anyone.</li>
+      <li>Transcript: ten real answers, two refusals where the documents had no answer.</li>
+      <li>Sample audit report, if a client needs a wider review than a test pass.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Terms in short</h2>
+    <ul class="tight">
+      <li>Day rate or fixed price per pass, agreed per engagement.</li>
+      <li>Your NDA, your client, your name on the report.</li>
+      <li>No tools sold, no retainer unless asked.</li>
+      <li>Invoicing and contract details on request.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="foot">
+  <span><b>Mikhail Golikov</b> · QA and automation</span>
+  <span>golikovichev@gmail.com</span>
+  <span>England</span>
+</div>
+
+</body>
+</html>
